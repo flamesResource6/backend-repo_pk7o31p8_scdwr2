@@ -1,6 +1,8 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any, Dict
 
 app = FastAPI()
 
@@ -64,6 +66,27 @@ def test_database():
     
     return response
 
+# -------- SaaS Lead Capture Endpoints --------
+from schemas import Lead
+from database import create_document
+
+@app.post("/api/leads")
+def create_lead(lead: Lead) -> Dict[str, Any]:
+    try:
+        lead_id = create_document("lead", lead)
+        return {"success": True, "id": lead_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Optional: expose schemas for tools/viewers
+@app.get("/schema")
+def get_schema():
+    from schemas import User, Product, Lead as LeadSchema
+    return {
+        "user": User.model_json_schema(),
+        "product": Product.model_json_schema(),
+        "lead": LeadSchema.model_json_schema(),
+    }
 
 if __name__ == "__main__":
     import uvicorn
